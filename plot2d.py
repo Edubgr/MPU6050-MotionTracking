@@ -1,29 +1,282 @@
-import matplotlib.pyplot as plt
+from matplotlib import animation
+from functions import *
 import numpy as np
-import pandas as pd
+import matplotlib.pyplot as plt
+###################################################
+#                  Plot datas                    #
+##################################################
+def plot_acc(time,acc,ax):
+    stationary = get_stationary(acc)
 
-file_number = input("What file number? ")
-graph_create = "Data_Quaternions.txt"
-#graph_create = input("Which graphic do you want to create?")
+    labels=['x','y','z','stationary']
+    ax.set(ylabel="Aceleração (m/s²)",title ="Aceleração")
+    ax.set_xlim(0,time.max())
+    ax.grid()
 
-arq_quat = pd.read_csv("./Datas/data_"+file_number+"/"+graph_create)
-quat = arq_quat[['qw','qx','qy','qz']]
-time = arq_quat['time']
+    color=['r','g','b','y']
+    for i in range(len(acc.columns)):
+        ax.plot(time,acc.iloc[:,i],label=labels[i],color=color[i])
+    ax.plot(time,stationary,label=labels[3],color=color[3])
+    ax.legend(frameon=False,loc='best',ncol=4)
+    return ax
 
-x = np.linspace(0.0, 5.0)
+def plot_vel(time,acc,ax,v_type):
+    if v_type == 'drift':
+        vel=get_vel_drift(time,acc)
+        ax.set(title="Velocidade correta")
+    elif v_type == 'pure':
+        vel=integral(time,acc,['velx','vely','velz'])
+        ax.set(title="Velocidade com desvio")
 
-print(quat)
- 
-fig, ax = plt.subplots()
-ax.set(xlabel='time (s)', ylabel='quat',
-       title='Quaternion Orientation')
-ax.grid()
+    labels=['x','y','z']
+    ax.set(ylabel="Velocidade (m/s)")
+    ax.set_xlim(0,time.max())
+    ax.grid()
+  
+    color=['r','g','b']
+    for i in range(len(vel.columns)):
+        ax.plot(time,vel.iloc[:,i],label=labels[i],color=color[i])
+    ax.legend(frameon=False,loc='best',ncol=3)
+    return ax
 
-ax.set_ylim(ymin=-1.5, ymax=1.5)
-ax.set_xlim(xmin=-0.5, xmax=20)
-ax.plot(time/1000, quat['qw'], '-')
-ax.plot(time/1000, quat['qx'], '-')
-ax.plot(time/1000, quat['qy'], '-')
-ax.plot(time/1000, quat['qz'], '-')
+def plot_pos(time,acc,ax,v_type):
+    if v_type == 'drift':
+        vel = get_vel_drift(time,acc)
+        pos = integral(time,vel,['posx','posy','posz'])
+        ax.set(title="Posição correta")
+    elif v_type == 'pure':
+        vel = integral(time,acc,['velx','vely','velz'])
+        pos = integral(time,vel,['posx','posy','posz'])
+        ax.set(title="Posição com desvio")
 
-plt.show()
+    labels=['x','y','z']
+    ax.set(ylabel="Posição (m)")
+    ax.set_xlim(0,time.max())
+    ax.grid()
+
+    color=['r','g','b']
+    for i in range(len(pos.columns)):
+        ax.plot(time,pos.iloc[:,i],label=labels[i],color=color[i])
+    ax.legend(frameon=False,loc='best',ncol=3)
+    return ax
+
+def plot_quat(time,quat,ax,v_type):
+    if v_type == 'correct':
+        qz = [0.75, -0.05, 0.00, 0.67]
+        quat=get_rotation_DFxV(quat,qz,['qw','qx','qy','qz'])
+        ax.set(title="Quaternion correto")
+    elif v_type == 'pure':
+        ax.set(title="Quaternion sem modificação")
+
+    labels=['w','x','y','z']
+    ax.set(ylabel="Quaternion")
+    ax.set_ylim(-1.5,1.5)
+    ax.set_xlim(0,time.max())
+    ax.grid()
+
+    color=['y','r','g','b']
+    for i in range(len(quat.columns)):
+        ax.plot(time,quat.iloc[:,i],label=labels[i],color=color[i])
+    ax.legend(frameon=False,loc='upper center',ncol=4)
+    return ax
+
+def plot_euler(ax,n):
+    time,euler=get_arc_euler(n)
+    ax.set(title="Euler")
+    labels=['alfa','beta','gama']
+    ax.set(ylabel="Grausº")
+    ax.set_ylim(-200,200)
+    ax.set_xlim(0,time.max())
+    ax.grid()
+    color=['r','g','b']
+    for i in range(len(euler.columns)):
+        ax.plot(time,euler.iloc[:,i],label=labels[i],color=color[i])
+    ax.legend(frameon=False,loc='upper center',ncol=3)
+    return ax
+
+def plot_animate(fig,ax,time,data,legend):
+       color = ['r','g','b','y']
+       # Create lines
+       lines = []
+       for i in range(len(data.columns)):
+              lobj = ax.plot([],[],color=color[i],label=legend[i])[0]
+              lines.append(lobj)
+       # Calculate max axis y
+       ylim=np.array([[-0.1,0.1]])
+       for i in range(len(data)):
+              if i>0:
+                     maxy=np.amax(data.iloc[:i].to_numpy())+0.2
+                     miny=np.amin(data.iloc[:i].to_numpy())-0.2
+                     minmax=[miny,maxy]
+                     ylim = np.concatenate((ylim,[minmax]),axis=0)
+       # Define animete function
+       def animate(frame):
+              for i,line in enumerate(lines):
+                     line.set_data(time[:frame+1],data.iloc[:frame+1,i])
+              ax.set_xlim(max(time[:frame+1]-8), max(time[:frame+1])+2)
+              ax.set_ylim(ylim[frame])
+              return lines
+       # Plot legend
+       ax.legend(frameon=False,loc='upper center',ncol=len(legend))
+       # Return animation
+       return animation.FuncAnimation(fig, animate,frames=len(data), interval=10, blit=False)
+###################################################
+#                  Find plots                    #
+##################################################
+def find_plot2d_static(ax,type_plot,time,acc,quat,n):
+    if type_plot == 'acc':
+        return plot_acc(time,acc,ax)
+    elif type_plot == 'vel':
+        return plot_vel(time,acc,ax,'pure')
+    elif type_plot == 'pos':
+        return plot_pos(time,acc,ax,'pure')
+    elif type_plot == 'veld':
+        return plot_vel(time,acc,ax,'drift')
+    elif type_plot == 'posd':
+        return plot_pos(time,acc,ax,'drift')
+    elif type_plot == 'quat':
+        return plot_quat(time,quat,ax,'pure')
+    elif type_plot == 'quatc':
+        return plot_quat(time,quat,ax,'correct')
+    elif type_plot == 'euler':
+        return plot_euler(ax,n)
+    else:
+        quit()
+
+def find_plot2d_animation(type_plot,time,acc,quat,n):
+    if type_plot == 'acc':
+        fig,ax=plt.subplots()
+        ax.set(title="Aceleração")
+        labels=['x','y','z']
+        ax.set(ylabel="Aceleração (m/s²)",xlabel='Tempo (s)')
+        ax.grid()
+        return plot_animate(fig,ax,time,acc,labels)
+    elif type_plot == 'vel':
+        fig,ax=plt.subplots()
+        vel = integral(time,acc,['velx','vely','velz'])
+        ax.set(title="Velocidade com desvio")
+        labels=['x','y','z']
+        ax.set(ylabel="Velocidade (m/s)",xlabel='Tempo (s)')
+        ax.grid()
+        return plot_animate(fig,ax,time,vel,labels)
+    elif type_plot == 'pos':
+        fig,ax=plt.subplots()
+        vel = integral(time,acc,['velx','vely','velz'])
+        pos = integral(time,vel,['posx','posy','posz'])
+        ax.set(title="Posição com desvio")
+        labels=['x','y','z']
+        ax.set(ylabel="Posição (m)",xlabel='Tempo (s)')
+        ax.grid()
+        return plot_animate(fig,ax,time,pos,labels)
+    elif type_plot == 'veld':
+        fig,ax=plt.subplots()
+        vel = get_vel_drift(time,acc)
+        ax.set(title="Velocidade correta")
+        labels=['x','y','z']
+        ax.set(ylabel="Velocidade (m/s)",xlabel='Tempo (s)')
+        ax.grid()
+        return plot_animate(fig,ax,time,vel,labels)
+    elif type_plot == 'posd':
+        fig,ax=plt.subplots()
+        vel = get_vel_drift(time,acc)
+        pos = integral(time,vel,['posx','posy','posz'])
+        ax.set(title="Posição correta")
+        labels=['x','y','z']
+        ax.set(ylabel="Posição (m)",xlabel='Tempo (s)')
+        ax.grid()
+        return plot_animate(fig,ax,time,pos,labels)
+    elif type_plot == 'quat':
+        fig,ax=plt.subplots()
+        ax.set(title="Quaternion sem modificação")
+        labels=['w','x','y','z']
+        ax.set(ylabel="Quaternion",xlabel='Tempo (s)')
+        ax.grid()
+        return plot_animate(fig,ax,time,quat,labels)
+    elif type_plot == 'quatc':
+        fig,ax=plt.subplots()
+        qz = [0.75, -0.05, 0.00, 0.67]
+        quat=get_rotation_DFxV(quat,qz,['qw','qx','qy','qz'])
+        ax.set(title="Quaternion correto")
+        labels=['w','x','y','z']
+        ax.set(ylabel="Quaternion",xlabel='Tempo (s)')
+        ax.grid()
+        return plot_animate(fig,ax,time,quat,labels)
+    elif type_plot == 'euler':
+        fig,ax=plt.subplots()
+        time,euler=get_arc_euler(n)
+        ax.set(title="Euler")
+        labels=['alfa','beta','gama']
+        ax.set(ylabel="Grausº",xlabel='Tempo (s)')
+        ax.grid()
+        return plot_animate(fig,ax,time,euler,labels)
+###################################################
+#                  Plot types                    #
+##################################################
+def plot2d_animated():
+    n=input('Folder number: ')
+    type_plot=input('Type plot: ')
+    return find_plot2d_animation(type_plot,*get_data(n),n)
+
+def plot2d_static_onecol():
+    n=input('Folder number: ')
+    time,cacc,quat = get_data(n)
+    r=input('Number row: ')
+    rows=int(r)
+    if rows==1:
+        fig, ax = plt.subplots(figsize=(12, 8))
+        type_plot=input('Type plot: ')
+        ax=find_plot2d_static(ax,type_plot,time,cacc,quat,n)
+        plt.xlabel("Tempo (s)")
+        return fig
+    elif rows>1:
+        fig, ax = plt.subplots(rows,sharex=True,figsize=(12, 8))
+        type_plot=[]
+        for i in range(rows):
+                type_plot=np.append(type_plot,input('Type plot %d: '%(i+1)))
+        for i,t_plot in enumerate(type_plot):
+            ax[i]=find_plot2d_static(ax[i],t_plot,time,cacc,quat,n)
+        plt.xlabel("Tempo (s)")
+        return fig
+        #plt.tight_layout()
+
+def plot2d_static_threeplot():
+    n=input('Folder number: ')
+    time,cacc,quat = get_data(n)
+    gridsize = (3, 2)
+    fig = plt.figure(figsize=(12, 8))
+    ax1_name=input('Type big plot: ')
+    ax2_name=input('Type small plot 1: ')
+    ax3_name=input('Type small plot 2: ')
+    ax1 = plt.subplot2grid(gridsize, (0, 0), colspan=2, rowspan=2)
+    ax1 = find_plot2d_static(ax1,ax1_name,time,cacc,quat,n)
+    ax2 = plt.subplot2grid(gridsize, (2, 0),sharex=ax1)
+    ax2 = find_plot2d_static(ax2,ax2_name,time,cacc,quat,n)
+    ax3 = plt.subplot2grid(gridsize, (2, 1),sharex=ax1)
+    ax2 = find_plot2d_static(ax3,ax3_name,time,cacc,quat,n)
+    plt.tight_layout()
+    return fig
+
+def plot2d_static_moredata():
+    rows=input('How many plots: ')
+    rows=int(rows)
+    if rows<1:
+        quit()
+    type_plot=[]
+    for i in range(rows):
+        type_plot=np.append(type_plot,input('Type plot %d: '%(i+1)))
+    cols=input('How many datas: ')
+    cols=int(cols)
+    if cols<=1:
+        quit()
+    fig, ax = plt.subplots(rows, cols,sharex=True,sharey='row',figsize=(12, 8))
+    for i in range(cols):
+        n= input('Folder number %d: '%(i+1))
+        time,cacc,quat = get_data(n)
+        if rows==1:
+            ax[i]=find_plot2d_static(ax[i],type_plot[0],time,cacc,quat,n)
+            ax[i].set_xlabel("Tempo (s)")
+        else:
+            for j in range(rows):
+                ax[j][i]=find_plot2d_static(ax[j][i],type_plot[j],time,cacc,quat,n)
+            ax[rows-1][i].set_xlabel("Tempo (s)")
+    return fig
