@@ -96,7 +96,7 @@ while(True):
     if reset == 1:
         if type_display == '0':
             if AorS == '0':
-                ani.save('plot'+'_'+dimension+'_'+plot+'.mp4', writer=animation.FFMpegWriter(fps=60))
+                ani.save('plot'+'_'+dimension+'_'+plot+'.mp4', writer=animation.FFMpegWriter(fps=100))
             elif AorS == '1':
                 plt.savefig('plot'+'_'+dimension+'_'+plot+'.png')
             print('Save archive of type: '+AorS+' dimension: '+dimension+' and plot type: '+plot)

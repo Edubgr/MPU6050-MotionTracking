@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy import signal as sgn
+import math as m
 ##################################################
 #                   Aux functions                #
 ##################################################
@@ -21,6 +22,16 @@ def qq_mult(q1, q2):
 def q_conjugate(q):
     w, x, y, z = q
     return (w, -x, -y, -z)
+# Return quaternion x quaternion with DataFrame X Vector
+def get_mult_quat_DFxV (quat):
+    res = pd.DataFrame([],columns=quat.columns.to_numpy())
+    q2 = quat.loc[0]
+    n=q2[0]**2+q2[1]**2+q2[2]**2+q2[3]**2
+    q2=q_conjugate(q2)/n
+    for i in range(len(quat)):
+        q=quat.loc[i].to_numpy()
+        res.loc[i] = q_mult(q,q2)
+    return res 
 # Return data rotate with DataFrame X Vector
 def get_rotation_DFxV (quat,v,name):
     res = pd.DataFrame([],columns=name)
@@ -44,6 +55,23 @@ def get_rotation_DFxDF(quat,data,name):
         else:
             res.loc[i] = qq_mult(q1,np.append([0],q2))[1:]
     return res 
+# Get Euler with quaternion
+def quaternion_to_euler(v):
+    w, x, y, z = v
+    t0 = 2 * (w * x + y * z)
+    t1 = 1 - 2 * (x * x + y * y)
+    X = m.atan2(t0, t1)
+
+    t2 = 2 * (w * y - z * x)
+    t2 = 1 if t2 > 1 else t2
+    t2 = -1 if t2 < -1 else t2
+    Y = m.asin(t2)
+        
+    t3 = 2 * (w * z + x * y)
+    t4 = 1 - 2 * (y * y + z * z)
+    Z = m.atan2(t3, t4)
+
+    return X, Y, Z
 # Calculate norm
 def norm(v):
     n = pd.DataFrame([],columns=['norm'])
@@ -98,8 +126,9 @@ def get_arrow_one(pos,uvw,n,v_type):
 # Calculate uvw vectors
 def get_uvw(size_vector,quat):
     # Rotate quat
-    qz = [0.75, -0.05, 0.00, 0.67]
-    quat=get_rotation_DFxV(quat,qz,['qw','qx','qy','qz'])
+    quat=get_mult_quat_DFxV(quat)
+    #qz=[0.70710678118, 0, 0, 0.70710678118]
+    #quat=get_rotation_DFxV(quat,qz,['qw','qx','qy','qz'])
     # Create vector uvw 
     columns=['u','v','w']
     x=get_rotation_DFxV(quat,[size_vector,0,0],columns)
@@ -156,8 +185,9 @@ def integral_vel(data,time,stationary):
 def get_data(n):
     time,acc=get_arc_acc(n)
     time,quat=get_arc_quat(n)
-    qz = [0.75, -0.05, 0.00, 0.67]
-    cquat=get_rotation_DFxV(quat,qz,['qw','qx','qy','qz'])
+    cquat=get_mult_quat_DFxV(quat)
+    #qz=[0.70710678118, 0, 0, 0.70710678118]
+    #quat=get_rotation_DFxV(quat,qz,['qw','qx','qy','qz'])
     cacc=get_rotation_DFxDF(cquat,acc,['accx','accy','accz'])
     return time, cacc, quat
 # Calculate drift
@@ -165,10 +195,10 @@ def get_drift(data,stationary,time):
     drift_start=np.where(np.diff(stationary)==-1)
     drift_end=np.where(np.diff(stationary)==1)
     xyz=[[0,0,0]]
-    drift_data=pd.DataFrame(np.repeat(xyz,len(data),axis=0),columns=['velx','vely','velz'])  
-    for i in range(len(drift_end)):
-        ti=drift_start[i][0]
-        tf=drift_end[i][0]
+    drift_data=pd.DataFrame(np.repeat(xyz,len(data),axis=0),columns=['velx','vely','velz']) 
+    for i in range(len(drift_end[0])):
+        ti=drift_start[0][i]
+        tf=drift_end[0][i]
         vel_end=data.loc[tf+1]
         tg=(vel_end/(time[tf]-time[ti])).values
         t_drift=time[ti:tf+2]-time[ti]
@@ -188,14 +218,16 @@ def get_arc_acc(n):
     arc = pd.read_csv(("./Datas/data_"+n+"/Data_LinearAcc.txt"))
     time = arc[['time']]['time']/1000
     acc = arc[['accx','accy','accz']]*9.81/8192
+    # Remove gravity // Não necessário pois a integral corrige
+    #get_rotation_DFxV(quat,[0,0,9.81],['x','y','z'])
     return time,acc
 # Get Accel with archive "Data_Euler"
-def get_arc_euler(n):
-    # Reading the quat data from a CSV file using pandas
-    arc = pd.read_csv(("./Datas/data_"+n+"/Data_Euler.txt"))
-    time = arc[['time']]['time']/1000
-    euler = arc[['alfa','beta','gama']]
-    return time,euler
+def get_euler(quat):
+    euler = pd.DataFrame([],columns=['alfa','beta','gama'])
+    for i in range(len(quat)):
+        q=quat.loc[i].to_numpy()
+        euler.loc[i] = quaternion_to_euler(q)
+    return euler
 # Calculate stationary period
 def get_stationary(acc):
     # Get norm to accel
@@ -207,7 +239,7 @@ def get_stationary(acc):
     # Calculate Low-Pass filter
     lp = pass_filter(hp,'low',5)
     # Calculate stationary period
-    stationary=lp<0.2
+    stationary=lp<0.065
     stationary=(stationary*1)['norm'].to_numpy()
     return stationary
 # Calculate velocity real

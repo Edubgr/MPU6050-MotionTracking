@@ -2,7 +2,9 @@ from functions import*
 import numpy as np
 import matplotlib.pyplot as plt 
 from matplotlib.animation import FuncAnimation
-
+###################################################
+#                  Plot types                    #
+##################################################
 def plot3d_animate(plot):
     n=input('Folder number: ')
     fig, ax = plt.subplots(subplot_kw=dict(projection="3d"),figsize=(12, 8)) 
@@ -113,7 +115,7 @@ def plot3d_animate(plot):
             line.set_data(pos_array[0:2, :n])  
             line.set_3d_properties(pos_array[2, :n]) 
     # Create animation
-    return FuncAnimation(fig, update, frames=size_frame, interval=10)
+    return FuncAnimation(fig, update, frames=size_frame, interval=1)
 
 def plot3d_static_pos():
     n=input('Folder number: ')
