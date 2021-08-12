@@ -20,8 +20,11 @@ Create the circuit below on a breadboard or a phenolite board:
 
 ## Example
 My board:
+
 ![](https://cdn.discordapp.com/attachments/633486363139768330/872995568232837181/unknown.png)
+
 My prototype:
+
 ![](https://cdn.discordapp.com/attachments/633486363139768330/875231769895510046/23daad41-3327-4f58-ab31-534a9cfbfb0a.png)
 
 # Instruction
