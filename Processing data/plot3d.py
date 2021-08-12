@@ -115,6 +115,9 @@ def plot3d_animate(plot):
             line.set_data(pos_array[0:2, :n])  
             line.set_3d_properties(pos_array[2, :n]) 
     # Create animation
+    ax.view_init(elev=45, azim=-45)
+    fig.set_figheight(5)
+    fig.set_figwidth(7.5)
     return FuncAnimation(fig, update, frames=size_frame, interval=1)
 
 def plot3d_static_pos():
@@ -142,6 +145,9 @@ def plot3d_static_pos():
     ax.set_zlim3d(maxmin)
     # Set text time
     ax.text(pos['posx'][size-1],pos['posy'][size-1],pos['posz'][size-1],"     "+str(time[size-1]), color='black')
+    ax.view_init(elev=89, azim=-90)
+    fig.set_figheight(10)
+    fig.set_figwidth(15)
     return fig
 
 def plot3d_static_posrot():
@@ -185,4 +191,7 @@ def plot3d_static_posrot():
     ax.set_zlim3d(maxmin)
     # Set text time
     ax.text(pos['posx'][size-1],pos['posy'][size-1],pos['posz'][size-1],"     "+str(time[size-1]), color='black')
+    ax.view_init(elev=1, azim=-90)
+    fig.set_figheight(10)
+    fig.set_figwidth(15)
     return fig

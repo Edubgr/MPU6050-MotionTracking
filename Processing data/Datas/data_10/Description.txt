@@ -1,0 +1,1 @@
+360 degree rotation around the y axis
