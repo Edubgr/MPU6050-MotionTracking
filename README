@@ -1,0 +1,12 @@
+This program was designed to determine the position and rotation of a body using the MPU6050 and a Raspberry Pi.
+
+To make it work, create the necessary circuit on a protoboard, run the program "Collect data" on your raspberry, press the button to start collecting the movement data and press it again to finish. Copy the files into the "Datas" folder and paste them into the "Processing data" program. Then run it on your computer or raspberry, following the appropriate procedures.
+
+The program will be able to return different types of graphs of different types of data. Examples of the results can be seen in:
+    https://www.youtube.com/watch?v=dDBdsNAT8Fs
+    https://www.youtube.com/watch?v=ekyY6dQ9t6o
+
+
+From the acceleration and quaternion values ​​obtained by the sensor, it is possible to determine the rotation, position and velocity of a body, using due processes. The program is still a robust version, which needs some improvements. Long movements with few pauses tend to have poor accuracy for position and velocity, due to the drift obtained by integrating acceleration data. However, rotation works in all cases, obtaining a rotation identical to the rotation performed by the body.
+
+For any questions, please contact me <eduguibar@gmail.com> - Eduardo Guimarães 2021
