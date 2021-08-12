@@ -49,6 +49,7 @@ The LEDs will indicate the status of the program:
 | 0 | 1 |Wait|
 | 1 | 1 |Ready |
 | 1 | 0 |Collecting|
+
 After collecting the data, copy the files from the "Datas" folder and paste them into the "Processing data" program.
 
 
