@@ -1,5 +1,3 @@
-# You need to "sudo apt-get install libgtkmm-3.0-dev" to build the demo_3d binary
-
 all: collect_data IMU_zero
 
 HDRS = helper_3dmath.h I2Cdev.h MPU6050_6Axis_MotionApps20.h MPU6050.h
